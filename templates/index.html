@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fertilizer Recommender & Usage Requirement Estimator</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background-color: #f0f8f0;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        .heading {
+            color: #228B22;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .input-container {
+            border: 2px solid #228B22;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        .result-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            margin-bottom: 30px; /* Margin below the result container */
+        }
+
+        .left-container,
+        .right-container {
+            width: 48%;
+            border: 2px solid #228B22;
+            border-radius: 10px;
+            padding: 20px;
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Added shadow for enhancement */
+        }
+
+        .predict-btn {
+            background-color: #228B22;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .gauge-heading {
+            color: #228B22;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .fertilizer-name {
+            color: #000000;
+            font-weight: bold;
+            font-size: 24px;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .fertilizer-image {
+            width: 80%; /* Reduced width for better fit */
+            height: auto;
+            border-radius: 10px;
+            display: block; /* Center the image */
+            margin: 0 auto; /* Center alignment */
+        }
+
+        .fertilizer-info {
+            margin-top: 15px;
+            font-size: 16px;
+            color: #333333;
+            text-align: left;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Light shadow for better readability */
+        }
+
+        .gauge-container {
+            display: flex;
+            justify-content: center; /* Center gauge */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="heading">Fertilizer Recommender & Usage Requirement Estimator</h1>
+        <form method="post" class="input-container">
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="temperature">Enter Temperature (°C)</label>
+                    <input type="number" class="form-control" id="temperature" name="temperature" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="humidity">Enter Humidity %</label>
+                    <input type="number" class="form-control" id="humidity" name="humidity" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="moisture">Enter Soil Moisture (%)</label>
+                    <input type="number" class="form-control" id="moisture" name="moisture" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="soil_type">Select Soil Type</label>
+                    <select class="form-control" id="soil_type" name="soil_type" required>
+                        <option>Black</option>
+                        <option>Sandy</option>
+                        <option>Loamy</option>
+                        <option>Clayey</option>
+                        <option>Red</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="crop_type">Select Crop Type</label>
+                    <select class="form-control" id="crop_type" name="crop_type" required>
+                        <option>Barley</option>
+                        <option>Cotton</option>
+                        <option>Ground Nuts</option>
+                        <option>Maize</option>
+                        <option>Millets</option>
+                        <option>Oil seeds</option>
+                        <option>Other Variety</option>
+                        <option>Paddy</option>
+                        <option>Pulses</option>
+                        <option>Sugarcane</option>
+                        <option>Tobacco</option>
+                        <option>Wheat</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="nitrogen">Enter Nitrogen(N)</label>
+                    <input type="number" class="form-control" id="nitrogen" name="nitrogen" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="potassium">Enter Potassium(K)</label>
+                    <input type="number" class="form-control" id="potassium" name="potassium" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="phosphorous">Enter Phosphorous(P)</label>
+                    <input type="number" class="form-control" id="phosphorous" name="phosphorous" required>
+                </div>
+            </div>
+            <button type="submit" class="btn predict-btn btn-block">Recommend Fertilizer</button>
+        </form>
+
+        {% if prediction %}
+        <div class="result-container">
+            <div class="left-container">
+                <h3 class="heading">Recommended Fertilizer</h3>
+                <div class="fertilizer-name">{{ fertilizer_name }}</div>
+                <div class="fertilizer-info">{{ pred_info }}</div> <!-- Added this block to display AI-generated info -->
+            </div>
+            <div class="right-container">
+                <h3 class="gauge-heading">Optimal Fertilizer Usage (kg/Acres)</h3>
+                <div class="gauge-container">
+                    <div id="gauge" style="width:300px;height:300px;"></div> <!-- Reduced gauge size -->
+                </div>
+                <script>
+                    var optimalUsage = {{ optimal_usage }};
+                    var gaugeData = [{
+                        type: 'indicator',
+                        mode: 'gauge+number',
+                        value: optimalUsage,
+                        gauge: {
+                            axis: { range: [0, 100], tickwidth: 2, tickcolor: "darkblue" },
+                            bar: { color: "blue" },
+                            bgcolor: "white",
+                            bordercolor: "black",
+                            borderwidth: 2,
+                            steps: [
+                                { range: [0, 50], color: "lightgray" },
+                                { range: [50, 100], color: "gray" }
+                            ],
+                        }
+                    }];
+
+                    var layout = {
+                        width: 370,
+                        height: 250,
+                        margin: { t: 20, b: 10, l: 3 }
+                    };
+
+                    Plotly.newPlot('gauge', gaugeData, layout);
+                </script>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+
+</html>
